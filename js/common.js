@@ -1,8 +1,8 @@
 // Cosas que comparten varias pantallas: agenda del día, títulos, detalle de un ítem.
 import * as store from './store.js';
 import { SCHEMA } from './schema.js';
-import { dayOf, timeOf, fmtFecha, mapsDir, mapsUrl, sortCities } from './logic.js';
-import { h, raw, esc, icon, openSheet, viewFile, formSheet, $ } from './ui.js';
+import { dayOf, timeOf, fmtFecha, mapsDir, mapsUrl, sortCities, checkinInfo, enTexto } from './logic.js';
+import { h, raw, esc, icon, openSheet, viewFile, formSheet, $, toast } from './ui.js';
 
 export const cityName = (id) => store.get('ciudades', id)?.nombre || '';
 export const today = () => new URLSearchParams(location.search).get('hoy') || undefined;
@@ -88,9 +88,13 @@ export function detailSheet(col, d) {
       return `<div><dt>${esc(f.l)}</dt><dd>${f.t === 'phone' ? `<a href="tel:${esc(v)}">${esc(v)}</a>` : f.t === 'url' ? `<a href="${esc(v)}" target="_blank" rel="noopener">Abrir link</a>` : esc(v)}</dd></div>`;
     }).join('');
   const target = mapTarget(col, d);
+  const ci = col === 'transportes' ? checkinInfo(d) : null;
+  const ciTxt = ci ? (d.checkinHecho ? '✅ Check-in hecho' : ci.estado === 'abierto' ? '🟢 El check-in está ABIERTO' : ci.estado === 'pronto' ? `⏳ El check-in abre en ${enTexto(ci.falta)}` : 'El vuelo ya salió') : '';
   const el = document.createElement('div');
-  el.innerHTML = `<dl class="kv big">${rows}</dl>
+  el.innerHTML = `${ci ? `<p class="ci-txt">${esc(ciTxt)}</p>` : ''}<dl class="kv big">${rows}</dl>
     <div class="btns wrap">
+      ${ci && d.checkinUrl ? `<a class="btn btn-p" target="_blank" rel="noopener" href="${esc(d.checkinUrl)}">Hacer check-in online</a>` : ''}
+      ${ci && (d.checkinDatos || d.reserva) ? '<button class="btn btn-s" data-a="copy">Copiar datos del check-in</button>' : ''}
       ${hasFiles(d) ? `<button class="btn btn-p" data-a="files">${icon('ticket').s}Abrir ticket / archivos</button>` : ''}
       ${target ? `<a class="btn btn-s" target="_blank" rel="noopener" href="${esc(col === 'alojamientos' ? mapsDir(target) : mapsUrl(target))}">${icon('pin').s}Cómo llegar</a>` : ''}
       ${d.telefono ? `<a class="btn btn-s" href="tel:${esc(d.telefono)}">${icon('phone').s}Llamar</a>` : ''}
@@ -100,6 +104,7 @@ export function detailSheet(col, d) {
   el.addEventListener('click', (e) => {
     const a = e.target.closest('[data-a]')?.dataset.a;
     if (a === 'files') openFiles(d, titleOf(col, d));
+    if (a === 'copy') navigator.clipboard?.writeText(d.checkinDatos || d.reserva || '').then(() => toast('Datos copiados'), () => toast('No se pudo copiar'));
     if (a === 'edit') { sh.close(); setTimeout(() => formSheet(col, d), 120); }
   });
   return sh;
@@ -136,3 +141,13 @@ export const lodgingFor = (ciudadId, hoy) => {
   return ls.find((a) => dayOf(a.checkIn) <= hoy && hoy <= dayOf(a.checkOut)) || ls[0];
 };
 export { $ };
+
+// Tarjetas "Check-in de vuelos": las usa Hoy antes y durante el viaje
+export function checkinHtml(ahora = Date.now()) {
+  const vs = store.list('transportes').map((t) => ({ t, ci: checkinInfo(t, ahora) })).filter((x) => x.ci && x.ci.estado !== 'pasado' && !x.t.checkinHecho).sort((a, b) => a.ci.salida - b.ci.salida);
+  if (!vs.length) return '';
+  const p2 = (n) => String(n).padStart(2, '0');
+  const fh = (ms) => { const d = new Date(ms); return `${fmtFecha(`${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`)} ${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+  const card = ({ t, ci }) => `<li class="n ci ${ci.estado === 'abierto' ? 'warn' : ''}" data-col="transportes" data-id="${esc(t.id)}"><div class="ci-b"><b>${esc(t.origen)} → ${esc(t.destino)}</b><small>${esc(t.numero || '')} · sale ${esc(fh(ci.salida))}</small><small class="${ci.estado === 'abierto' ? 'ci-on' : ''}">${ci.estado === 'abierto' ? '🟢 Abierto ahora: hacelo ya' : `Abre ${esc(fh(ci.abre))} · en ${esc(enTexto(ci.falta))}`}</small>${t.checkinUrl ? `<div class="btns"><a class="btn btn-p btn-sm" target="_blank" rel="noopener" href="${esc(t.checkinUrl)}">Ir al check-in</a><button class="btn btn-s btn-sm" data-act="ci-copy">Copiar datos</button><button class="btn btn-s btn-sm" data-act="ci-done">Ya lo hice</button></div>` : '<div class="btns"><button class="btn btn-s btn-sm" data-act="open">Cargar el link</button></div>'}</div></li>`;
+  return `<h3 class="sec">Check-in de vuelos</h3><ul class="next">${vs.slice(0, 4).map(card).join('')}</ul>`;
+}

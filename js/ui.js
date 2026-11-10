@@ -154,6 +154,7 @@ export function formSheet(col, doc = {}, { defaults = {}, onSaved, titulo } = {}
   const form = document.createElement('form');
   form.className = 'form'; form.noValidate = true;
   const inputs = {};
+  const cond = [];
   let adv = null;
   for (const f of sch.fields) {
     if (f.hide) continue;
@@ -183,9 +184,11 @@ export function formSheet(col, doc = {}, { defaults = {}, onSaved, titulo } = {}
     inputs[f.k] = el;
     if (f.t === 'bool') wrap.append(el, Object.assign(document.createElement('span'), { textContent: f.l }));
     else { const s = document.createElement('span'); s.textContent = f.l + (f.req ? ' *' : ''); wrap.append(s, el); }
+    if (f.solo) cond.push({ wrap, solo: f.solo });
     if (f.adv) { if (!adv) { adv = document.createElement('details'); adv.className = 'adv'; adv.innerHTML = '<summary>Más datos</summary>'; form.append(adv); } adv.append(wrap); }
     else form.append(wrap);
   }
+  if (cond.length && inputs.tipo) { const upd = () => cond.forEach((c) => { c.wrap.hidden = inputs.tipo.value !== c.solo; }); inputs.tipo.addEventListener('change', upd); upd(); }
   const err = document.createElement('p'); err.className = 'err'; err.hidden = true; err.setAttribute('role', 'alert');
   const btns = document.createElement('div'); btns.className = 'btns';
   btns.innerHTML = `<button type="button" class="btn btn-s" data-a="x">Cancelar</button><button type="submit" class="btn btn-p">Guardar</button>`;

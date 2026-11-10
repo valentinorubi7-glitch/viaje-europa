@@ -1,8 +1,8 @@
 // Pantalla "Hoy": qué toca ahora, cuenta regresiva y pendientes.
 import * as store from '../store.js';
 import { tripRange, tripState, cityOn, localToday, localHM, fmtFecha, fmtFechaLarga, diffDays, dayOf, timeOf, addDays, sortCities, mapsDir, mapsUrl } from '../logic.js';
-import { h, raw, esc, icon, $, openSheet, fileUrl, formSheet } from '../ui.js';
-import { eventsOn, eventRow, wireEvents, cityName, today, lodgingFor, detailSheet, openFiles, hasFiles, titleOf, evTitle, subOf, mapTarget } from '../common.js';
+import { h, raw, esc, icon, $, openSheet, fileUrl, formSheet, toast } from '../ui.js';
+import { checkinHtml, eventsOn, eventRow, wireEvents, cityName, today, lodgingFor, detailSheet, openFiles, hasFiles, titleOf, evTitle, subOf, mapTarget } from '../common.js';
 import { weatherFor } from '../weather.js';
 
 export async function coverUrl(cityId) {
@@ -48,6 +48,7 @@ export async function render(root) {
     const val = store.list('checklist').filter((c) => c.grupo === 'Valijas');
     html = h`<header class="top"><p class="kicker">${fmtFechaLarga(hoy)}</p><h1 class="city-h">Falta${est.dias === 1 ? '' : 'n'} ${est.dias} día${est.dias === 1 ? '' : 's'}</h1><p class="sub">Salen el ${fmtFecha(rango.inicio)} · ${ciudades.length} ciudades · hasta el ${fmtFecha(rango.fin)}</p></header>
       ${prox ? raw(`<div class="hero ${bgFondo ? 'hero-foto' : 'hero-grad'}" ${bgFondo ? `style="background-image:url('${bgFondo}')"` : ''} data-col="transportes" data-id="${prox.id}"><div class="hero-in"><p class="kicker">Primer traslado</p><h2>${esc(prox.origen)} → ${esc(prox.destino)}</h2><p class="hero-s">${esc(fmtFecha(dayOf(prox.salida)))} · ${esc(timeOf(prox.salida))} · ${esc(prox.numero || prox.tipo)}</p><div class="btns"><button class="btn btn-p" data-act="open">Ver detalle</button>${hasFiles(prox) ? '<button class="btn btn-s" data-act="files">Abrir ticket</button>' : ''}</div></div></div>`) : ''}
+      ${raw(checkinHtml())}
       <h3 class="sec">Pendientes ${raw(`<span class="count">${pend.length}</span>`)}</h3>
       <ul class="next">${pend.length ? pend.slice(0, 8).map((p) => pendRow(p, hoy)) : raw('<li class="empty">Todo sacado. ¡Qué orden!</li>')}</ul>
       ${pend.length > 8 ? raw('<a class="more" href="#/mas/entradas">Ver todas las entradas</a>') : ''}
@@ -75,6 +76,7 @@ export async function render(root) {
         <button class="q q-sos" id="q-sos">${icon('sos').s}<span>Emergencia</span></button>
       </div>
       ${pend.filter((p) => p.prio === 1).length ? raw(`<a class="alert" href="#/mas/entradas">${icon('sos').s}<span><b>${pend.filter((p) => p.prio === 1).length} ${pend.filter((p) => p.prio === 1).length === 1 ? 'cosa' : 'cosas'} para sacar ya</b> (se agotan rápido). Tocá para verlas.</span></a>`) : ''}
+      ${raw(checkinHtml())}
       <h3 class="sec">Plan de hoy</h3>
       <ul class="tasks" id="plan-hoy">${ev.length ? ev.map((e) => eventRow(e)) : raw('<li class="empty">No hay nada cargado para hoy.</li>')}</ul>
       ${sinDia.length ? raw(`<h3 class="sec">Ideas de ${esc(city.nombre)} sin día</h3><ul class="tasks">${sinDia.slice(0, 5).map((a) => `<li class="task" data-col="actividades" data-id="${a.id}"><button class="task-t" data-act="open"><b>${esc(a.titulo)}</b><small>${esc(a.categoria || 'Sin día asignado')}</small></button><button class="btn btn-s btn-sm" data-act="hoy">Hoy</button></li>`).join('')}</ul>`) : ''}
@@ -91,6 +93,8 @@ export async function render(root) {
     if (!d) return;
     if (act === 'files') openFiles(d, titleOf(box.dataset.col, d));
     else if (act === 'hoy') await store.save('actividades', { ...d, fecha: hoy });
+    else if (act === 'ci-copy') navigator.clipboard?.writeText(d.checkinDatos || d.reserva || '').then(() => toast('Datos copiados'), () => toast('No se pudo copiar'));
+    else if (act === 'ci-done') await store.save('transportes', { ...d, checkinHecho: true });
   });
 
   if (est.fase === 'durante') {

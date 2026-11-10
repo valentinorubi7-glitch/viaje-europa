@@ -169,3 +169,21 @@ export function parseCSV(text) {
 export const uid = (p = 'x') => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 export const mapsUrl = (q) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 export const mapsDir = (q) => `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}`;
+
+// --- Check-in online de vuelos: cuándo abre y cuánto falta ---
+export function checkinInfo(t, ahora = Date.now()) {
+  if (!t || t.tipo !== 'Vuelo' || !t.salida || t.salida.length < 16) return null;
+  if (t.salida.slice(11, 16) === '00:00') return null; // 00:00 = todavía no se sabe la hora
+  const horas = Number(t.checkinHoras) || 24;
+  const salida = new Date(t.salida).getTime(); // hora local del celular (aproximada si cambian de huso horario)
+  const abre = salida - horas * 3600e3;
+  const estado = ahora >= salida ? 'pasado' : ahora >= abre ? 'abierto' : 'pronto';
+  return { abre, salida, horas, estado, falta: abre - ahora };
+}
+export function enTexto(ms) {
+  const m = Math.max(0, Math.round(ms / 60000));
+  const d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60), mi = m % 60;
+  if (d) return `${d} día${d === 1 ? '' : 's'}${h ? ` y ${h} h` : ''}`;
+  if (h) return `${h} h${mi ? ` ${mi} min` : ''}`;
+  return `${mi} min`;
+}
