@@ -9,9 +9,16 @@ import { tasas } from './gastos.js';
 
 const rerender = () => window.dispatchEvent(new Event('app-rerender'));
 
+const aplicarTema = (t) => {
+  try { t === 'auto' ? localStorage.removeItem('tema') : localStorage.setItem('tema', t); } catch { /* sin almacenamiento: no pasa nada */ }
+  if (t === 'auto') delete document.documentElement.dataset.tema; else document.documentElement.dataset.tema = t;
+  const oscuro = t === 'oscuro' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelectorAll('meta[name=theme-color]').forEach((m) => m.setAttribute('content', oscuro ? '#121C18' : '#F6EFE2'));
+};
 export function renderMenu(root) {
   const it = [['bed', 'Alojamientos', '#/mas/alojamientos'], ['ticket', 'Entradas y reservas', '#/mas/entradas'], ['lock', 'Documentos', '#/mas/docs'], ['camera', 'Fotos y recuerdos', '#/mas/fotos'], ['list', 'Valijas y pendientes', '#/mas/checklist'], ['info', 'Info útil', '#/mas/info'], ['pin', 'Mapa de lugares', '#/mas/mapa'], ['star', 'Resumen del viaje', '#/mas/resumen'], ['gear', 'Ajustes y respaldo', '#/mas/ajustes']];
-  root.innerHTML = h`<header class="top"><p class="kicker">Todo lo demás</p><h1 class="city-h">Más</h1></header><div class="menu">${it.map(([i, l, hr]) => raw(`<a class="m-i" href="${hr}">${icon(i).s}<span>${esc(l)}</span>${icon('chev').s}</a>`))}</div>`.toString();
+  root.innerHTML = h`<header class="top"><p class="kicker">Todo lo demás</p><h1 class="city-h">Más</h1></header><p class="kicker" style="margin-top:16px">Apariencia</p><div class="tema" role="group" aria-label="Tema">${['auto', 'claro', 'oscuro'].map((t) => raw(`<button type="button" data-tema="${t}" aria-pressed="${(localStorage.getItem('tema') || 'auto') === t}">${{ auto: 'Automático', claro: '☀️ Claro', oscuro: '🌙 Oscuro' }[t]}</button>`))}</div><div class="menu">${it.map(([i, l, hr]) => raw(`<a class="m-i" href="${hr}">${icon(i).s}<span>${esc(l)}</span>${icon('chev').s}</a>`))}</div>`.toString();
+  root.querySelectorAll('[data-tema]').forEach((b) => b.addEventListener('click', () => { aplicarTema(b.dataset.tema); root.querySelectorAll('[data-tema]').forEach((x) => x.setAttribute('aria-pressed', x === b)); }));
 }
 
 // --- Fotos ---

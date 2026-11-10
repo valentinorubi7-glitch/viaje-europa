@@ -9,7 +9,9 @@
 
 :root{--bg:#F6EFE2;--surface:#FFFBF3;--surface2:#F1E8D6;--ink:#2A2622;--muted:#6B6154;--line:#E3D8C2;--line2:#B9AB8F;--accent:#1F4A3D;--accent-ink:#FFF8EA;--btn2:#FFFBF3;--btn2-ink:#1F4A3D;--btn2-line:#1F4A3D;--ok:#1F4A3D;--ok-ink:#FFF8EA;--pill:#EADFC8;--pill-ink:#4B4235;--warn:#C8442F;--warn-ink:#FFF8EA;--sos:#B13620;--tipbg:#EFE4CC;--navbg:#FFFBF3;--nav-on:#C8442F;--focus:#C8442F;--danger:#B13620;
 --fd:'Instrument Serif',Georgia,serif;--fb:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;--r:12px;--rb:10px;--ease:cubic-bezier(.23,1,.32,1);--drawer:cubic-bezier(.32,.72,0,1);color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--bg:#121C18;--surface:#1B2823;--surface2:#24352E;--ink:#F1EBDD;--muted:#A9B2A8;--line:#2B3C35;--line2:#4A5F56;--accent:#8CC7AD;--accent-ink:#0F1B16;--btn2:#1B2823;--btn2-ink:#CDE8DB;--btn2-line:#5C7A6D;--ok:#8CC7AD;--ok-ink:#0F1B16;--pill:#2B3C35;--pill-ink:#D6E2DA;--warn:#E5705B;--warn-ink:#1B0C08;--sos:#FF8F7A;--tipbg:#1F2F28;--navbg:#16221D;--nav-on:#F29783;--focus:#F29783;--danger:#FF8F7A;color-scheme:dark}}
+@media (prefers-color-scheme:dark){:root:not([data-tema=claro]){--bg:#121C18;--surface:#1B2823;--surface2:#24352E;--ink:#F1EBDD;--muted:#A9B2A8;--line:#2B3C35;--line2:#4A5F56;--accent:#8CC7AD;--accent-ink:#0F1B16;--btn2:#1B2823;--btn2-ink:#CDE8DB;--btn2-line:#5C7A6D;--ok:#8CC7AD;--ok-ink:#0F1B16;--pill:#2B3C35;--pill-ink:#D6E2DA;--warn:#E5705B;--warn-ink:#1B0C08;--sos:#FF8F7A;--tipbg:#1F2F28;--navbg:#16221D;--nav-on:#F29783;--focus:#F29783;--danger:#FF8F7A;color-scheme:dark}}
+:root[data-tema=oscuro]{--bg:#121C18;--surface:#1B2823;--surface2:#24352E;--ink:#F1EBDD;--muted:#A9B2A8;--line:#2B3C35;--line2:#4A5F56;--accent:#8CC7AD;--accent-ink:#0F1B16;--btn2:#1B2823;--btn2-ink:#CDE8DB;--btn2-line:#5C7A6D;--ok:#8CC7AD;--ok-ink:#0F1B16;--pill:#2B3C35;--pill-ink:#D6E2DA;--warn:#E5705B;--warn-ink:#1B0C08;--sos:#FF8F7A;--tipbg:#1F2F28;--navbg:#16221D;--nav-on:#F29783;--focus:#F29783;--danger:#FF8F7A;color-scheme:dark}
+:root[data-tema=claro]{color-scheme:light}
 
 *{box-sizing:border-box;margin:0}
 html{-webkit-text-size-adjust:100%;background:var(--bg)}
@@ -195,3 +197,8 @@ ul,ol{list-style:none;padding:0}
 .gl{padding-bottom:64px}
 
 .top{padding-right:96px}.top-city,.top .btn,.welcome .top{padding-right:0}
+
+.tema{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:16px;background:var(--surface2);padding:4px;border-radius:12px}
+.tema button{min-height:44px;border:0;background:transparent;border-radius:9px;font:600 14px var(--fb);color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.tema button[aria-pressed=true]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(60,40,10,.18)}
+.hero-foto::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(20,40,32,.55),transparent 60%)}

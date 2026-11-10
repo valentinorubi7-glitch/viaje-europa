@@ -1,5 +1,5 @@
 // Service worker: guarda la app en el celular para que abra sin internet.
-const VERSION = 'v1.0.1';
+const VERSION = 'v1.1.0';
 const CACHE = `viaje-europa-${VERSION}`;
 const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',

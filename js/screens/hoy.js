@@ -43,10 +43,11 @@ export async function render(root) {
   let html = '';
 
   if (est.fase === 'antes') {
+    const bgFondo = await coverUrl(null);
     const prox = transportes.filter((t) => t.salida).sort((a, b) => a.salida.localeCompare(b.salida))[0];
     const val = store.list('checklist').filter((c) => c.grupo === 'Valijas');
     html = h`<header class="top"><p class="kicker">${fmtFechaLarga(hoy)}</p><h1 class="city-h">Falta${est.dias === 1 ? '' : 'n'} ${est.dias} día${est.dias === 1 ? '' : 's'}</h1><p class="sub">Salen el ${fmtFecha(rango.inicio)} · ${ciudades.length} ciudades · hasta el ${fmtFecha(rango.fin)}</p></header>
-      ${prox ? raw(`<div class="hero hero-grad" data-col="transportes" data-id="${prox.id}"><div class="hero-in"><p class="kicker">Primer traslado</p><h2>${esc(prox.origen)} → ${esc(prox.destino)}</h2><p class="hero-s">${esc(fmtFecha(dayOf(prox.salida)))} · ${esc(timeOf(prox.salida))} · ${esc(prox.numero || prox.tipo)}</p><div class="btns"><button class="btn btn-p" data-act="open">Ver detalle</button>${hasFiles(prox) ? '<button class="btn btn-s" data-act="files">Abrir ticket</button>' : ''}</div></div></div>`) : ''}
+      ${prox ? raw(`<div class="hero ${bgFondo ? 'hero-foto' : 'hero-grad'}" ${bgFondo ? `style="background-image:url('${bgFondo}')"` : ''} data-col="transportes" data-id="${prox.id}"><div class="hero-in"><p class="kicker">Primer traslado</p><h2>${esc(prox.origen)} → ${esc(prox.destino)}</h2><p class="hero-s">${esc(fmtFecha(dayOf(prox.salida)))} · ${esc(timeOf(prox.salida))} · ${esc(prox.numero || prox.tipo)}</p><div class="btns"><button class="btn btn-p" data-act="open">Ver detalle</button>${hasFiles(prox) ? '<button class="btn btn-s" data-act="files">Abrir ticket</button>' : ''}</div></div></div>`) : ''}
       <h3 class="sec">Pendientes ${raw(`<span class="count">${pend.length}</span>`)}</h3>
       <ul class="next">${pend.length ? pend.slice(0, 8).map((p) => pendRow(p, hoy)) : raw('<li class="empty">Todo sacado. ¡Qué orden!</li>')}</ul>
       ${pend.length > 8 ? raw('<a class="more" href="#/mas/entradas">Ver todas las entradas</a>') : ''}
