@@ -18,8 +18,8 @@ export const SITIOS = [
   { claves: ['pescadores', 'fisherman'], url: 'https://fishermansbastion.com/', nota: '' },
   { claves: ['palacio real', 'royal palace'], url: 'https://tickets.patrimonionacional.es/en/tickets/palacio-real-de-madrid', nota: '' },
   { claves: ['louvre'], url: 'https://www.louvre.fr/en/visit/hours-admission', nota: '' },
-  { claves: ['versalles', 'versailles'], url: 'https://www.chateauversailles.fr/en/plan-your-visit', nota: '' },
-  { claves: ['hortus'], url: 'https://hortus-botanicus.nl/en/', nota: '' },
+  { claves: ['versalles', 'versailles'], url: 'https://www.chateauversailles.fr/en', nota: '' },
+  { claves: ['hortus'], url: 'https://www.dehortus.nl/en/', nota: '' },
 ];
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
