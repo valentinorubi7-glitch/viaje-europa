@@ -108,6 +108,16 @@ async function boot() {
     } catch { /* en el hosting público este archivo no existe, y está bien */ }
     await store.meta.set('seedProbado', true);
   }
+  // Link de conexión: #/conectar=<datos en base64>. Se usa una sola vez y se borra de la barra de direcciones.
+  const m = /^#\/conectar=([\w-]+)$/.exec(location.hash);
+  if (m) {
+    try {
+      const c = JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g, '+').replace(/_/g, '/')))));
+      if (c.u && c.k) await sync.saveConf({ url: c.u, clave: c.k });
+      toast('Conectado con el Sheet');
+    } catch { toast('El link de conexión no es válido'); }
+    history.replaceState(null, '', location.pathname + location.search + '#/hoy');
+  }
   store.subscribe(() => show());
   window.addEventListener('app-rerender', () => show());
   window.addEventListener('hashchange', () => { closeSheets(); document.querySelectorAll('.viewer').forEach((v) => v.remove()); document.body.classList.remove('lock'); show(); });
