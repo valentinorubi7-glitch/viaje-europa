@@ -1,9 +1,9 @@
 // Service worker: guarda la app en el celular para que abra sin internet.
-const VERSION = 'v1.2.0';
+const VERSION = 'v1.3.0';
 const CACHE = `viaje-europa-${VERSION}`;
 const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
-  'js/main.js', 'js/logic.js', 'js/schema.js', 'js/store.js', 'js/sync.js', 'js/ui.js', 'js/common.js', 'js/weather.js',
+  'js/main.js', 'js/logic.js', 'js/schema.js', 'js/store.js', 'js/sync.js', 'js/ui.js', 'js/common.js', 'js/weather.js', 'js/ticket.js', 'js/ideas.js', 'js/lector.js', 'js/links.js',
   'js/screens/hoy.js', 'js/screens/plan.js', 'js/screens/listas.js', 'js/screens/gastos.js', 'js/screens/mas.js', 'js/screens/docs.js',
   'fonts/instrument-serif-latin-400-normal.woff2', 'fonts/instrument-serif-latin-ext-400-normal.woff2', 'fonts/instrument-serif-latin-400-italic.woff2',
   'fonts/hanken-grotesk-latin-500-normal.woff2', 'fonts/hanken-grotesk-latin-600-normal.woff2', 'fonts/hanken-grotesk-latin-700-normal.woff2', 'fonts/hanken-grotesk-latin-ext-600-normal.woff2',
@@ -23,6 +23,7 @@ self.addEventListener('fetch', (e) => {
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const hit = await cache.match(req, { ignoreSearch: true });
+    if (hit && url.pathname.includes('/vendor/')) return hit; // librerías pesadas: se guardan una vez y no se revisan más
     const net = fetch(req).then((r) => { if (r.ok) cache.put(req, r.clone()); return r; }).catch(() => null);
     if (hit) { e.waitUntil(net); return hit; }          // rápido: lo guardado, y se actualiza por detrás
     const r = await net;

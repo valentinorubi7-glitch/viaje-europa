@@ -2,6 +2,7 @@
 import * as store from './store.js';
 import { SCHEMA } from './schema.js';
 import { uid, sortCities } from './logic.js';
+import { linkParaSacar } from './links.js';
 
 // --- HTML seguro: todo lo que viene de datos pasa por esc() ---
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -116,7 +117,7 @@ export async function viewFile(ref) {
 }
 
 // Campo "archivos" dentro de un formulario
-function filesField(initial, sync = true) {
+function filesField(initial, sync = true, onAdded = null) {
   let refs = [...(initial || [])];
   const box = document.createElement('div');
   box.className = 'files';
@@ -131,8 +132,10 @@ function filesField(initial, sync = true) {
     const add = document.createElement('label'); add.className = 'btn btn-s file-add';
     add.innerHTML = `${icon('plus')}<span>Agregar PDF o foto</span><input type="file" multiple accept="image/*,application/pdf" hidden>`;
     $('input', add).onchange = async (e) => {
-      for (const f of e.target.files) refs.push(await saveFile(f, { sync }));
+      const nuevos = [...e.target.files];
+      for (const f of nuevos) refs.push(await saveFile(f, { sync }));
       draw();
+      onAdded?.(nuevos);
     };
     box.append(add);
   };
@@ -171,7 +174,7 @@ export function formSheet(col, doc = {}, { defaults = {}, onSaved, titulo } = {}
       el.value = String(v ?? (os[0]?.v ?? ''));
       if (f.t === 'select' && !os.some((o) => String(o.v) === String(v)) && !v) el.value = String(os[0]?.v ?? '');
     } else if (f.t === 'files') {
-      el = filesField(val[f.k]);
+      el = filesField(val[f.k], true, col === 'entradas' ? (fs) => leerEnForm(fs) : null);
     } else {
       el = document.createElement('input');
       el.type = { date: 'date', time: 'time', datetime: 'datetime-local', number: 'text', phone: 'tel', url: 'url' }[f.t] || 'text';
@@ -184,6 +187,18 @@ export function formSheet(col, doc = {}, { defaults = {}, onSaved, titulo } = {}
     inputs[f.k] = el;
     if (f.t === 'bool') wrap.append(el, Object.assign(document.createElement('span'), { textContent: f.l }));
     else { const s = document.createElement('span'); s.textContent = f.l + (f.req ? ' *' : ''); wrap.append(s, el); }
+    if (col === 'entradas' && f.k === 'link') {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-s btn-sm'; b.textContent = 'Buscar dónde sacarla'; b.style.marginTop = '8px';
+      b.onclick = () => {
+        const lugar = inputs.lugar.value.trim();
+        if (!lugar) { toast('Primero escribí el nombre del lugar'); return; }
+        const ciudad = store.get('ciudades', inputs.ciudadId.value)?.nombre || '';
+        const r = linkParaSacar(lugar, ciudad);
+        if (r.directo) { inputs.link.value = r.url; toast(r.nota ? `Link oficial puesto. ${r.nota}` : 'Link oficial puesto'); }
+        else { window.open(r.url, '_blank', 'noopener'); toast('Se abrió una búsqueda: copiá el link de la web oficial y pegalo acá'); }
+      };
+      wrap.append(b);
+    }
     if (f.solo) cond.push({ wrap, solo: f.solo });
     if (f.adv) { if (!adv) { adv = document.createElement('details'); adv.className = 'adv'; adv.innerHTML = '<summary>Más datos</summary>'; form.append(adv); } adv.append(wrap); }
     else form.append(wrap);
@@ -196,6 +211,23 @@ export function formSheet(col, doc = {}, { defaults = {}, onSaved, titulo } = {}
   if (!isNew) {
     const d = document.createElement('button'); d.type = 'button'; d.className = 'btn btn-d btn-block'; d.textContent = `Borrar ${sch.one || 'esto'}`; d.dataset.a = 'del';
     form.append(d);
+  }
+  async function leerEnForm(files) {
+    let note = form.querySelector('.lec');
+    if (!note) { note = document.createElement('p'); note.className = 'hint lec'; note.setAttribute('role', 'status'); form.querySelector('.files')?.after(note); }
+    note.textContent = 'Leyendo el ticket… (la primera vez puede tardar un poco)';
+    try {
+      const { leerTicket } = await import('./lector.js');
+      const r = await leerTicket(files[0]);
+      const poner = (k, v) => { if (v && inputs[k] && !inputs[k].value) inputs[k].value = v; };
+      poner('fecha', r.fecha); poner('hora', r.hora); poner('lugar', r.lugar); poner('ciudadId', r.ciudadId);
+      if (inputs.estado && inputs.estado.value !== 'Comprada') inputs.estado.value = 'Comprada';
+      const extra = [r.precio && `Precio del ticket: ${r.precio.monto} ${r.precio.moneda}`, r.codigos.length && `Códigos: ${r.codigos.join(', ')}`].filter(Boolean).join('\n');
+      if (extra && inputs.nota && !inputs.nota.value.includes(extra)) inputs.nota.value = (inputs.nota.value ? inputs.nota.value + '\n' : '') + extra;
+      note.textContent = r.fecha || r.hora
+        ? `Leí el ticket (${r.via === 'pdf' ? 'PDF' : 'foto'}): ${[r.fecha && 'día ' + r.fecha, r.hora && 'hora ' + r.hora].filter(Boolean).join(', ')}. Revisá que esté bien antes de guardar.`
+        : r.leyoAlgo ? 'Pude leer el ticket pero no encontré fecha ni hora: completalas a mano.' : 'No pude leer texto en este archivo: completá los datos a mano.';
+    } catch (e) { note.textContent = e.message; }
   }
   const sh = openSheet(form, { titulo: titulo || (isNew ? `Nuevo: ${sch.one}` : `Editar ${sch.one}`) });
   form.addEventListener('click', async (e) => {
@@ -239,4 +271,13 @@ export async function mover(col, items, i, dir) {
   const oa = a.orden ?? i, ob = b.orden ?? j;
   await store.save(col, { ...a, orden: ob === oa ? ob + dir : ob });
   await store.save(col, { ...b, orden: oa });
+}
+
+// Borrar con confirmación y "Deshacer" (sirve para cualquier sección)
+export async function borrarConDeshacer(col, d) {
+  const nombre = d.lugar || d.titulo || d.nombre || d.texto || d.descripcion || (d.origen && `${d.origen} → ${d.destino}`) || SCHEMA[col].one;
+  if (!(await confirmar(`¿Borrar "${nombre}"? Se puede deshacer unos segundos.`))) return false;
+  await store.remove(col, d.id);
+  toast('Borrado', { l: 'Deshacer', fn: () => store.restore(col, d.id) });
+  return true;
 }

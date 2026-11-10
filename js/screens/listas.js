@@ -1,7 +1,8 @@
 // Listas de Transportes, Alojamientos, Entradas, Valijas/Pendientes e Info útil.
 import * as store from '../store.js';
 import { sortCities, fmtFecha, dayOf, timeOf, localToday, diffDays } from '../logic.js';
-import { h, raw, esc, icon, formSheet, mover } from '../ui.js';
+import { h, raw, esc, icon, formSheet, mover, borrarConDeshacer, saveFile, toast } from '../ui.js';
+import { linkParaSacar } from '../links.js';
 import { cityName, detailSheet, hasFiles, openFiles, subOf, titleOf, today } from '../common.js';
 import { pendientes } from './hoy.js';
 
@@ -15,6 +16,7 @@ function bindList(root, col, onAdd) {
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act === 'files') openFiles(d, titleOf(col, d));
     else if (act === 'open') detailSheet(col, d);
+    else if (act === 'del') borrarConDeshacer(col, d);
   });
 }
 
@@ -48,11 +50,27 @@ export function renderEntradas(root) {
   const ok = store.list('entradas').filter((e) => e.estado === 'Comprada').sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
   root.innerHTML = h`<a class="back" href="#/mas">${icon('back').s}Más</a><header class="top"><p class="kicker">${pend.length} por sacar · ${ok.length} compradas</p><h1 class="city-h">Entradas</h1></header>
     <h3 class="sec">Por sacar <span class="hint-i">primero las que se agotan</span></h3>
-    <ul class="next">${pend.map((p) => raw(`<li class="n ${p.prio === 1 ? 'warn' : ''}" data-id="${p.doc.id}"><button class="n-b" data-act="open"><b>${esc(p.doc.lugar)}</b><small>${esc([cityName(p.doc.ciudadId), p.doc.estado === 'Gratis, hay que reservar' ? 'gratis, reservar' : ''].filter(Boolean).join(' · '))}</small></button><button class="btn btn-s btn-sm" data-act="buy">${p.doc.link ? 'Comprar' : '¡Ya la saqué!'}</button></li>`))}${pend.length ? '' : raw('<li class="empty">No falta sacar nada.</li>')}</ul>
+    <ul class="next">${pend.map((p) => raw(`<li class="n stack ${p.prio === 1 ? 'warn' : ''}" data-id="${p.doc.id}"><button class="n-b" data-act="open"><b>${esc(p.doc.lugar)}</b><small>${esc([cityName(p.doc.ciudadId), p.doc.estado === 'Gratis, hay que reservar' ? 'gratis, reservar' : ''].filter(Boolean).join(' · '))}</small></button><div class="acts"><a class="btn btn-p btn-sm" data-act="sacar" target="_blank" rel="noopener" href="${esc(p.doc.link || linkParaSacar(p.doc.lugar, cityName(p.doc.ciudadId)).url)}">Sacar entrada</a><button class="btn btn-s btn-sm" data-act="buy">Ya la saqué</button><button class="mini" data-act="del" aria-label="Borrar">${icon('trash').s}</button></div></li>`))}${pend.length ? '' : raw('<li class="empty">No falta sacar nada.</li>')}</ul>
     <h3 class="sec">Compradas</h3>
-    <ul class="next">${ok.map((e) => rowHtml('entradas', e, ` · ${fmtFecha(e.fecha)} ${esc(e.hora || '')} · ${cityName(e.ciudadId)}`))}${ok.length ? '' : raw('<li class="empty">Todavía no hay entradas compradas.</li>')}</ul>
-    ${fab('Agregar entrada o reserva')}`.toString();
+    <ul class="next">${ok.map((e) => raw(`<li class="n" data-id="${e.id}"><button class="n-b" data-act="open"><b>${esc(e.lugar)}</b><small>${esc([fmtFecha(e.fecha), e.hora, cityName(e.ciudadId)].filter(Boolean).join(' · '))}</small></button>${hasFiles(e) ? `<button class="mini" data-act="files" aria-label="Abrir ticket">${icon('ticket').s}</button>` : ''}<button class="mini" data-act="del" aria-label="Borrar">${icon('trash').s}</button></li>`))}${ok.length ? '' : raw('<li class="empty">Todavía no hay entradas compradas.</li>')}</ul>
+    <label class="btn btn-p btn-block">${icon('doc').s}Cargar ticket (PDF o foto)<input id="tk" type="file" accept="application/pdf,image/*" hidden></label>
+    <p class="hint">Elegí el PDF o la captura del ticket: la app lee la fecha, la hora y el lugar y te los deja para revisar.</p>
+    ${fab('Agregar entrada o reserva a mano')}`.toString();
   bindList(root, 'entradas', () => formSheet('entradas', {}, { defaults: { estado: 'Falta sacar', prioridad: 2 } }));
+  root.querySelector('#tk').onchange = async (ev) => {
+    const f = ev.target.files[0];
+    if (!f) return;
+    toast('Leyendo el ticket… (la primera vez puede tardar)');
+    const ref = await saveFile(f);
+    let r = null;
+    try { r = await (await import('../lector.js')).leerTicket(f); } catch (err) { toast(err.message); }
+    const m = r?.match;
+    const extra = r ? [r.precio && `Precio del ticket: ${r.precio.monto} ${r.precio.moneda}`, r.codigos?.length && `Códigos: ${r.codigos.join(', ')}`].filter(Boolean).join('\n') : '';
+    const nota = (m?.nota ? m.nota + '\n' : '') + extra;
+    if (m) formSheet('entradas', { ...m, estado: 'Comprada', fecha: r.fecha || m.fecha, hora: r.hora || m.hora, archivos: [...(m.archivos || []), ref], nota: nota.trim() }, { titulo: 'Revisá lo que leí', onSaved: () => toast('Entrada cargada') });
+    else formSheet('entradas', {}, { titulo: 'Revisá lo que leí', defaults: { lugar: r?.lugar || '', ciudadId: r?.ciudadId || '', fecha: r?.fecha || '', hora: r?.hora || '', estado: 'Comprada', prioridad: 2, archivos: [ref], nota: extra } });
+    if (r && !r.fecha && !r.hora) toast('No encontré fecha ni hora: completalas a mano');
+  };
   root.addEventListener('click', (e) => {
     if (e.target.closest('[data-act=buy]')) {
       const d = store.get('entradas', e.target.closest('[data-id]').dataset.id);

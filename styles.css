@@ -204,3 +204,5 @@ ul,ol{list-style:none;padding:0}
 .hero-foto::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(20,40,32,.55),transparent 60%)}
 
 .ci{align-items:flex-start;padding:10px}.ci-b{flex:1;min-width:0}.ci-b b{display:block;font-size:15.5px;overflow-wrap:anywhere}.ci-b small{display:block;color:var(--muted);font-size:13px}.ci-b .ci-on{color:var(--ok);font-weight:700}.ci-b .btns{margin-top:10px;flex-wrap:wrap}.ci-b .btn{flex:1 1 90px}.ci-txt{font-weight:700;margin:4px 0 8px}
+
+.n.stack{flex-wrap:wrap}.n.stack .n-b{flex:1 1 100%}.n.stack .acts{display:flex;gap:8px;align-items:center;width:100%;padding:0 8px 8px}.n.stack .acts .btn{flex:1}

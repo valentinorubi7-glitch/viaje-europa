@@ -80,6 +80,7 @@ export async function render(root) {
       <h3 class="sec">Plan de hoy</h3>
       <ul class="tasks" id="plan-hoy">${ev.length ? ev.map((e) => eventRow(e)) : raw('<li class="empty">No hay nada cargado para hoy.</li>')}</ul>
       ${sinDia.length ? raw(`<h3 class="sec">Ideas de ${esc(city.nombre)} sin día</h3><ul class="tasks">${sinDia.slice(0, 5).map((a) => `<li class="task" data-col="actividades" data-id="${a.id}"><button class="task-t" data-act="open"><b>${esc(a.titulo)}</b><small>${esc(a.categoria || 'Sin día asignado')}</small></button><button class="btn btn-s btn-sm" data-act="hoy">Hoy</button></li>`).join('')}</ul>`) : ''}
+      ${city ? raw(`<a class="more" href="#/plan/${esc(city.id)}">💡 Ver más ideas para hacer en ${esc(city.nombre)}</a>`) : ''}
       ${prox.length ? raw(`<h3 class="sec">Lo que viene</h3><ul class="next">${prox.map((e) => `<li class="n" data-col="${e.col}" data-id="${e.doc.id}"><button class="n-b" data-act="open"><b>${esc(evTitle(e))}</b><small>${esc(fmtFecha(e.d))} ${esc(e.hora)} · ${esc(subOf(e.col, e.doc))}</small></button><span class="pill">${diffDays(hoy, e.d) === 1 ? 'Mañana' : 'En ' + diffDays(hoy, e.d) + ' días'}</span></li>`).join('')}</ul>`) : ''}`;
   } else html = h`<div class="soon"><b>Sin datos todavía</b></div>`;
 

@@ -2,7 +2,8 @@
 import * as store from './store.js';
 import { SCHEMA } from './schema.js';
 import { dayOf, timeOf, fmtFecha, mapsDir, mapsUrl, sortCities, checkinInfo, enTexto } from './logic.js';
-import { h, raw, esc, icon, openSheet, viewFile, formSheet, $, toast } from './ui.js';
+import { h, raw, esc, icon, openSheet, viewFile, formSheet, $, toast, borrarConDeshacer } from './ui.js';
+import { linkParaSacar } from './links.js';
 
 export const cityName = (id) => store.get('ciudades', id)?.nombre || '';
 export const today = () => new URLSearchParams(location.search).get('hoy') || undefined;
@@ -93,12 +94,14 @@ export function detailSheet(col, d) {
   const el = document.createElement('div');
   el.innerHTML = `${ci ? `<p class="ci-txt">${esc(ciTxt)}</p>` : ''}<dl class="kv big">${rows}</dl>
     <div class="btns wrap">
+      ${col === 'entradas' && d.estado !== 'Comprada' ? `<a class="btn btn-p" target="_blank" rel="noopener" href="${esc(d.link || linkParaSacar(d.lugar, cityName(d.ciudadId)).url)}">Sacar la entrada</a>` : ''}
       ${ci && d.checkinUrl ? `<a class="btn btn-p" target="_blank" rel="noopener" href="${esc(d.checkinUrl)}">Hacer check-in online</a>` : ''}
       ${ci && (d.checkinDatos || d.reserva) ? '<button class="btn btn-s" data-a="copy">Copiar datos del check-in</button>' : ''}
       ${hasFiles(d) ? `<button class="btn btn-p" data-a="files">${icon('ticket').s}Abrir ticket / archivos</button>` : ''}
       ${target ? `<a class="btn btn-s" target="_blank" rel="noopener" href="${esc(col === 'alojamientos' ? mapsDir(target) : mapsUrl(target))}">${icon('pin').s}Cómo llegar</a>` : ''}
       ${d.telefono ? `<a class="btn btn-s" href="tel:${esc(d.telefono)}">${icon('phone').s}Llamar</a>` : ''}
       <button class="btn btn-s" data-a="edit">Editar</button>
+      <button class="btn btn-d" data-a="del">Borrar</button>
     </div>`;
   const sh = openSheet(el, { titulo: titleOf(col, d) });
   el.addEventListener('click', (e) => {
@@ -106,6 +109,7 @@ export function detailSheet(col, d) {
     if (a === 'files') openFiles(d, titleOf(col, d));
     if (a === 'copy') navigator.clipboard?.writeText(d.checkinDatos || d.reserva || '').then(() => toast('Datos copiados'), () => toast('No se pudo copiar'));
     if (a === 'edit') { sh.close(); setTimeout(() => formSheet(col, d), 120); }
+    if (a === 'del') { sh.close(); setTimeout(() => borrarConDeshacer(col, d), 200); }
   });
   return sh;
 }

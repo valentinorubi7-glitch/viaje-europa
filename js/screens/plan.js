@@ -1,6 +1,8 @@
 // Itinerario: lista de ciudades y detalle de cada una, día por día.
 import * as store from '../store.js';
-import { sortCities, dateRange, fmtFecha, diffDays, localToday, mapsDir, addDays } from '../logic.js';
+import { sortCities, dateRange, fmtFecha, diffDays, localToday, mapsDir, mapsUrl, addDays } from '../logic.js';
+import { ideasPara } from '../ideas.js';
+import { googleBuscar } from '../links.js';
 import { h, raw, esc, icon, formSheet, openSheet, toast } from '../ui.js';
 import { eventsOn, eventRow, wireEvents, today, detailSheet, hasFiles } from '../common.js';
 import { coverUrl } from './hoy.js';
@@ -39,6 +41,8 @@ export async function renderCity(root, id) {
   const sinDia = store.list('actividades').filter((a) => a.ciudadId === id && !a.fecha).sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
   const ents = store.list('entradas').filter((e) => e.ciudadId === id && !e.fecha);
   const noches = diffDays(c.llegada, c.salida);
+  const yaCargado = [...store.list('actividades').filter((a) => a.ciudadId === id).map((a) => a.titulo), ...store.list('entradas').filter((e) => e.ciudadId === id).map((e) => e.lugar)];
+  const ideas = ideasPara(c.nombre, yaCargado);
 
   root.innerHTML = h`<a class="back" href="#/plan">${icon('back').s}Plan</a>
     <header class="top top-city"><p class="kicker">Ciudad ${cs.findIndex((x) => x.id === id) + 1} de ${cs.length}</p><h1 class="city-h">${c.nombre}</h1><p class="sub">${fmtFecha(c.llegada)} → ${fmtFecha(c.salida)} · ${noches} noche${noches === 1 ? '' : 's'}${c.pais ? ' · ' + c.pais : ''}</p>
@@ -53,6 +57,9 @@ export async function renderCity(root, id) {
     <ol class="days">${days.map((d, i) => { const ev = eventsOn(d).filter((e) => !(e.col === 'alojamientos' && false)); return raw(`<li class="day ${d === hoy ? 'now' : ''}"><div class="day-h"><b>${esc(fmtFecha(d))}</b><span>${d === c.llegada ? 'Llegada' : d === c.salida ? 'Salida' : 'Día ' + (i + 1)}${d === hoy ? ' · hoy' : ''}</span></div><ul class="tasks cmp">${ev.length ? ev.map((e) => eventRow(e).s).join('') : '<li class="empty sm">Sin plan</li>'}</ul><button class="btn btn-s btn-sm" data-add="${d}">${icon('plus').s}Agregar al día</button></li>`); })}</ol>
     <h3 class="sec">Sin día asignado</h3>
     <ul class="tasks">${sinDia.map((a) => eventRow({ col: 'actividades', doc: a, hora: '' }))}${ents.map((e) => eventRow({ col: 'entradas', doc: e, hora: '' }))}${sinDia.length + ents.length ? '' : raw('<li class="empty sm">Nada pendiente de asignar.</li>')}</ul>
+    <details class="acc ideas"><summary>💡 Ideas para sumar${ideas.length ? ` (${ideas.length})` : ''}</summary><div class="acc-b"><p class="hint" style="margin-top:0">Sugerencias generales, no salen de tu Sheet. Revisá horarios y feriados antes de ir.</p>
+      <ul class="next">${ideas.map((x, i) => raw(`<li class="n stack" data-i="${i}"><div class="n-b"><b>${esc(x.titulo)}</b><small>${esc(x.categoria)} · ${esc(x.por)}</small></div><div class="acts"><button class="btn btn-p btn-sm" data-idea="sumar">Sumar al plan</button><a class="btn btn-s btn-sm" target="_blank" rel="noopener" href="${esc(mapsUrl(x.titulo + ' ' + c.nombre))}">Ver en el mapa</a></div></li>`))}${ideas.length ? '' : raw('<li class="empty sm">Ya sumaste todas las ideas de esta ciudad.</li>')}</ul>
+      <a class="more" target="_blank" rel="noopener" href="${esc(googleBuscar('qué hacer en ' + c.nombre + ' en enero'))}">Buscar más ideas en internet</a></div></details>
     <button class="btn btn-s btn-block" id="add-act">${icon('plus').s}Agregar actividad</button>
     ${c.barrio ? raw(`<p class="tip">${icon('pin').s}<span><b>Barrio recomendado:</b> ${esc(c.barrio)}</span></p>`) : ''}
     ${c.nota ? raw(`<p class="tip"><span>${esc(c.nota)}</span></p>`) : ''}`.toString();
@@ -66,6 +73,14 @@ export async function renderCity(root, id) {
     if (b) addToDay(id, b.dataset.add);
     const a = e.target.closest('article[data-col]');
     if (a && e.target.closest('[data-act=open]')) detailSheet('alojamientos', store.get('alojamientos', a.dataset.id));
+  });
+  root.addEventListener('click', async (e) => {
+    const s = e.target.closest('[data-idea=sumar]');
+    if (!s) return;
+    const x = ideas[+s.closest('[data-i]').dataset.i];
+    if (!x) return;
+    await store.save('actividades', { ciudadId: id, titulo: x.titulo, categoria: x.categoria, nota: x.por, fecha: '', hora: '', hecha: false, link: '', orden: sinDia.length + 1 });
+    toast(`Sumado a ${c.nombre}: ${x.titulo}`);
   });
 }
 
